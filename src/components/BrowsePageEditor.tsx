@@ -8,7 +8,7 @@ type BrowsePageEditorProps = {
 
 export const BrowsePageEditor = (props: BrowsePageEditorProps) => {
   return (
-    <div className="gr-form">
+    <div className="gf-form">
       <InlineFormLabel>Page Number</InlineFormLabel>
       <Input
         value={props.pageNum || '0'}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { SelectableValue, QueryEditorProps } from '@grafana/data';
-import { InlineFormLabel, Select } from '@grafana/ui';
+import { InlineFormLabel, Select, DatePickerWithInput } from '@grafana/ui';
 import { BrowsePageEditor } from './components/BrowsePageEditor';
 import { BrowseAttrEditor } from './components/BrowseAttrEditor';
 import { BrowseIndexEditor } from './components/BrowseIndexEditor';
@@ -21,7 +21,7 @@ export const QueryEditor = (props: QueryEditorProps<NasaNeoWsApi, NasaNeoWsQuery
 
   return (
     <>
-      <div className='gf-gorm'>
+      <div className='gf-form'>
         <InlineFormLabel>Query Type</InlineFormLabel>
         <Select<NasaNeoWsQueryType>
           options={queryTypes}
@@ -31,35 +31,65 @@ export const QueryEditor = (props: QueryEditorProps<NasaNeoWsApi, NasaNeoWsQuery
             onRunQuery();
           }}
         />
-        {query.queryType === 'browse' && (
+      </div>
+      {query.queryType === 'browse' && (
+        <div className='gf-form'>
+          <BrowsePageEditor 
+            pageNum={query.pageNum || '0'}
+            onPageNumChange={(pageNum: string) => {
+              onChange({ ...query, pageNum });
+              onRunQuery();
+            }}
+          />
+          <BrowseAttrEditor
+            attr={query.attr || ''}
+            onAttrChange={(attr: string) => {
+              onChange({ ...query, attr });
+              onRunQuery();
+            }}
+          />
+          <BrowseIndexEditor
+            index={query.index || 'all'}
+            onIndexChange={(index: string) => {
+              onChange({ ...query, index });
+              onRunQuery();
+            }}
+          />
+        </div>
+      )}
+      {query.queryType === 'range' && (
+        <div className='gf-form'>
+          <BrowseAttrEditor
+            attr={query.attr || ''}
+            onAttrChange={(attr: string) => {
+              onChange({ ...query, attr });
+              onRunQuery();
+            }}
+          />
+          <InlineFormLabel>Start Date</InlineFormLabel>
+          <DatePickerWithInput
+            value={query.startDate || new Date()}
+            onChange={(e)=>{
+              const startDate = e.toISOString().substring(0, 10);
+              onChange({ ...query, startDate });
+              onRunQuery();
+            }}
+          />
+          {/* {query.startDate && (
           <>
-            <BrowsePageEditor 
-              pageNum={query.pageNum || '0'}
-              onPageNumChange={(pageNum: string) => {
-                onChange({ ...query, pageNum });
-                onRunQuery();
-              }}
-            />
-            <BrowseAttrEditor
-              attr={query.attr || ''}
-              onAttrChange={(attr: string) => {
-                onChange({ ...query, attr });
-                onRunQuery();
-              }}
-            />
-            <BrowseIndexEditor
-              index={query.index || 'all'}
-              onIndexChange={(index: string) => {
-                onChange({ ...query, index });
+            <InlineFormLabel>End Date</InlineFormLabel>
+            <DatePickerWithInput
+              value={query.endDate}
+              onChange={(e)=>{
+                const endDate = e.toISOString().substring(0, 10);
+                onChange({ ...query, endDate });
                 onRunQuery();
               }}
             />
           </>
-        )}
-        {query.queryType === 'range' && (
-          <>range start and end</>
-        )}
-      </div>
+          )} */}
+        </div>
+      )}
     </>
   );
 };

@@ -15,7 +15,7 @@ const attrTypes: SelectableValue[] = [
 
 export const BrowseAttrEditor = (props: BrowseAttrEditorProps) => {
   return (
-    <div className="gr-form">
+    <div className="gf-form">
       <InlineFormLabel>Neo Attrs</InlineFormLabel>
       <Select
         options={attrTypes}

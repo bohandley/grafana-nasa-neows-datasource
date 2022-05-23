@@ -7,20 +7,25 @@ export type NasaNeoWsQueryType = 'browse' | 'range';
 
 type NasaNeoWsBaseQuery<Q extends NasaNeoWsQueryType> = { 
   queryType: Q; 
-  attr: string 
+  attr: string;
+  names: any[];
 } & DataQuery;
 
 type NasaNeoWsBrowseQuery = { 
   pageNum: string;
   index: string;
 } & NasaNeoWsBaseQuery<'browse'>;
-type NasaNeoWsRangeQuery = {} & NasaNeoWsBaseQuery<'range'>;
+
+type NasaNeoWsRangeQuery = {
+  startDate: string;
+  endDate: string;
+} & NasaNeoWsBaseQuery<'range'>;
 
 export type NasaNeoWsQuery = NasaNeoWsBrowseQuery | NasaNeoWsRangeQuery;
 
 export type NasaEndpoints = {
   browse: string;
-  feed: string;
+  range: string;
 };
 
 export type NasaParams = {

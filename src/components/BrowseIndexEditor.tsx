@@ -18,7 +18,7 @@ for (let i = 0; i< 20; i++) {
 
 export const BrowseIndexEditor = (props: BrowseIndexEditorProps) => {
   return (
-    <div className="gr-form">
+    <div className="gf-form">
       <InlineFormLabel>Neo Attrs</InlineFormLabel>
       <Select
         options={indexTypes}
