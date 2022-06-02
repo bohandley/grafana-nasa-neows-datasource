@@ -3,5 +3,6 @@
   "type": "datasource",
   "id": "grafana-nasaneows-datasource",
   "name": "NasaNeoWs",
-  "metrics": true
+  "metrics": true,
+  "annotations": true
 }

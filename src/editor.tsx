@@ -1,15 +1,22 @@
 import React from 'react';
 import { SelectableValue, QueryEditorProps } from '@grafana/data';
-import { InlineFormLabel, Select, DatePickerWithInput } from '@grafana/ui';
+import { InlineFormLabel, Select, DatePickerWithInput, Input } from '@grafana/ui';
 import { BrowsePageEditor } from './components/BrowsePageEditor';
 import { BrowseAttrEditor } from './components/BrowseAttrEditor';
-import { BrowseIndexEditor } from './components/BrowseIndexEditor';
+import { BrowseNameEditor } from './components/BrowseNameEditor';
 import { NasaNeoWsApi } from './datasource';
 import { NasaNeoWsQueryType, NasaNeoWsQuery, NasaNeoWsConfig } from 'types';
 
 const queryTypes: SelectableValue<NasaNeoWsQueryType>[] = [
   { value: 'browse', label: 'Browse by Page'},
   { value: 'range', label: 'Date Range'}
+]
+
+const hazardousTypes: SelectableValue[] = [
+  { value: 'none', label: 'None'},
+  { value: 'true', label: 'true'},
+  { value: 'false', label: 'false'},
+  { value: '$hazardous', label: '$hazardous'},
 ]
 
 export const ConfigEditor = () => {
@@ -33,29 +40,56 @@ export const QueryEditor = (props: QueryEditorProps<NasaNeoWsApi, NasaNeoWsQuery
         />
       </div>
       {query.queryType === 'browse' && (
-        <div className='gf-form'>
-          <BrowsePageEditor 
-            pageNum={query.pageNum || '0'}
-            onPageNumChange={(pageNum: string) => {
-              onChange({ ...query, pageNum });
-              onRunQuery();
-            }}
-          />
-          <BrowseAttrEditor
-            attr={query.attr || ''}
-            onAttrChange={(attr: string) => {
-              onChange({ ...query, attr });
-              onRunQuery();
-            }}
-          />
-          <BrowseIndexEditor
-            index={query.index || 'all'}
-            onIndexChange={(index: string) => {
-              onChange({ ...query, index });
-              onRunQuery();
-            }}
-          />
-        </div>
+        <>
+          <div className='gf-form'>
+            <BrowseAttrEditor
+              attr={query.attr || ''}
+              onAttrChange={(attr: string) => {
+                onChange({ ...query, attr });
+                onRunQuery();
+              }}
+            />
+          </div>
+          <div className='gf-form'>
+            <BrowsePageEditor 
+              page={query.page || '0'}
+              onPageChange={(page: string) => {
+                onChange({ ...query, page });
+                onRunQuery();
+              }}
+            />
+            <div className='gf-form'>
+              <InlineFormLabel>Hazardous</InlineFormLabel>
+              <Select
+                options={hazardousTypes}
+                value={query.hazardous ? query.hazardous : 'none'}
+                onChange={(e) => {
+                  onChange({...query, hazardous: e.value } as NasaNeoWsQuery);
+                  onRunQuery();
+                }}
+              />
+            </div>
+          </div>
+          <div className='gf-form'>
+            <div className="gf-form">
+              <InlineFormLabel>Orbiting Body</InlineFormLabel>
+              <Input
+                value={query.orbitingBody || ''}
+                onChange={(e) => {
+                  onChange({...query, orbitingBody: e.currentTarget.value} as NasaNeoWsQuery);
+                  onRunQuery();
+                }}
+              />
+            </div>
+            <BrowseNameEditor
+              name={query.name || ''}
+              onNameChange={(name: string) => {
+                onChange({ ...query, name });
+                onRunQuery();
+              }}
+            />
+          </div>
+        </>
       )}
       {query.queryType === 'range' && (
         <div className='gf-form'>
@@ -66,11 +100,12 @@ export const QueryEditor = (props: QueryEditorProps<NasaNeoWsApi, NasaNeoWsQuery
               onRunQuery();
             }}
           />
-          <InlineFormLabel>Start Date</InlineFormLabel>
+          <InlineFormLabel>Week Starting at</InlineFormLabel>
           <DatePickerWithInput
             value={query.startDate || new Date()}
             onChange={(e)=>{
-              const startDate = e.toISOString().substring(0, 10);
+              const nasaDate = new Date(e);
+              const startDate = nasaDate.toISOString().substring(0, 10);
               onChange({ ...query, startDate });
               onRunQuery();
             }}

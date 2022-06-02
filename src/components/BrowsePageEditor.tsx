@@ -2,8 +2,8 @@ import React from 'react';
 import { InlineFormLabel, Input } from '@grafana/ui';
 
 type BrowsePageEditorProps = {
-  pageNum: string;
-  onPageNumChange: (pageNum: string) => void;
+  page: string;
+  onPageChange: (page: string) => void;
 }
 
 export const BrowsePageEditor = (props: BrowsePageEditorProps) => {
@@ -11,8 +11,8 @@ export const BrowsePageEditor = (props: BrowsePageEditorProps) => {
     <div className="gf-form">
       <InlineFormLabel>Page Number</InlineFormLabel>
       <Input
-        value={props.pageNum || '0'}
-        onChange={(e) => props.onPageNumChange(e.currentTarget.value)}
+        value={props.page || '0'}
+        onChange={(e) => props.onPageChange(e.currentTarget.value)}
         title="0 to 1468"
       />
     </div>
