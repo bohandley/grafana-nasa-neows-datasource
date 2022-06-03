@@ -63,7 +63,6 @@ export type NasaNeoWsVariableQuery =
   | VariableQueryTypeOrbitingBody
   | VariableQueryTypePage;
 
-
 export type NasaEndpoints = {
   browse: string;
   range: string;
@@ -74,6 +73,18 @@ export type NasaParams = {
   ed: string;
   ak: string;
 };
+
+// for data frames 
+export type frameType = {
+  name: string;
+  fields: fieldType[];
+}
+
+export type fieldType = {
+  name: string;
+  values: any[];
+  X?: string
+}
 
 // CREATE TYPE FOR Near Earth Objects
 export type NearEarthObject = {
@@ -87,14 +98,31 @@ export type NearEarthObject = {
   designation: string;
   nasa_jpl_url: string
   absolute_magnitude_h: string;
-  estimated_diameter: {
-    // simpified and not used currently
-  }; 
+  estimated_diameter: estimatedDiameter; 
   is_potentially_hazardous_asteroid: boolean;
   close_approach_data: CloseApproachData[];
   orbital_data: OrbitalData;
   is_sentry_object: boolean;
 }
+
+export type estimatedDiameter = {
+  kilometers: {
+      estimated_diameter_min: string;
+      estimated_diameter_max: string;
+  },
+  meters: {
+      estimated_diameter_min: string;
+      estimated_diameter_max: string;
+  },
+  miles: {
+      estimated_diameter_min: string;
+      estimated_diameter_max: string;
+  },
+  feet: {
+      estimated_diameter_min: string;
+      estimated_diameter_max: string;
+  }
+};
 
 export type CloseApproachData = {
   close_approach_date: string;

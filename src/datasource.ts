@@ -18,7 +18,8 @@ import {
   NearEarthObject,
   CloseApproachData,
   NasaNeoWsEventsQuery,
-  NasaNeoWsAnnotationType
+  NasaNeoWsAnnotationType,
+  frameType,
 } from './types';
 import { AnnotationEditor } from './components/AnnotationEditor';
 
@@ -26,100 +27,46 @@ import { interpolateQuery, interpolateVariableQuery } from 'interpolate';
 
 export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
   previousQuery = {};
-  someCollectionOfIds: string[];
+  apiKey: string = 'yAyH8cJEzor6tU5Kl6iLxnNnqLunMUq9jpy9rES4';
+  nasaBaseUrl: string = 'https://api.nasa.gov/neo/rest/v1/';
+  endpoints: NasaEndpoints = {
+    browse: 'neo/browse?',
+    range: 'feed?'
+  };
+  params: NasaParams = {
+    sd: 'start_date=',
+    ed: 'end_date=',
+    ak: 'api_key='
+  };
+  // list of names could be used in select
+  names: string[] = [];
 
   constructor(instanceSettings: DataSourceInstanceSettings<NasaNeoWsConfig>) {
     super(instanceSettings);
     this.annotations = {
       QueryEditor: AnnotationEditor,
     };
-    const urlForIds = 'url'
-    this.someCollectionOfIds = fetch(urlForIds).then(resp => resp);
   }
 
   async query(request: DataQueryRequest<NasaNeoWsQuery>) {
+    // annotations
     if(request.targets[0].eventsQuery) {
       return this.getAnnotations(request, this.previousQuery);
-    //   const events =[
-    //     {
-    //         "time": 1653426300000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426360000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426420000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426480000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426540000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426600000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426660000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426720000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426780000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426840000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426900000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653426960000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653427020000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653427080000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653427140000,
-    //         "title": "Updates"
-    //     },
-    //     {
-    //         "time": 1653427200000,
-    //         "title": "Updates"
-    //     }
-    // ];
-    //   return { data: [toDataFrame(events)] };
     }
     
+    // queries
     if (request.targets && request.targets.length > 0) {
       this.previousQuery = request.targets[0];
       return this.getNeos(request)
     }
+
     return Promise.resolve({data: []});
   }
 
   async metricFindQuery(query: NasaNeoWsVariableQuery): Promise<MetricFindValue[]> {
-    const nasaBaseUrl = 'https://api.nasa.gov/neo/rest/v1/neo/browse?';
+    const nasaBaseUrl = this.nasaBaseUrl + this.endpoints['browse'];
     // move this into config editor
-    const apiKey = 'yAyH8cJEzor6tU5Kl6iLxnNnqLunMUq9jpy9rES4';
+    const apiKey = this.apiKey;
     let interpolatedQuery = interpolateVariableQuery(query);
     const queryType = interpolatedQuery.queryType;
     
@@ -230,23 +177,13 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
   }
 
   private async getNeos(request:any) {
+    // interpolate the query and replace attrs with template variables, i.e. $orbitingBody
     let actualQuery = interpolateQuery(request.targets[0]);
-    const nasaBaseUrl = 'https://api.nasa.gov/neo/rest/v1/';
+  
     // move this into config editor
-    const apiKey = 'yAyH8cJEzor6tU5Kl6iLxnNnqLunMUq9jpy9rES4';
-    
-    const endpoints: NasaEndpoints = {
-      browse: 'neo/browse?',
-      range: 'feed?'
-    };
+    const apiKey = this.apiKey;
 
-    const params: NasaParams = {
-      sd: 'start_date=',
-      ed: 'end_date=',
-      ak: 'api_key='
-    };
-
-    // used for the selections
+    // used for the selections, assign this.names, access in browseNames in future
     let names: any[] = [];
 
     // 1. choose either browse or range
@@ -267,13 +204,14 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
         const actualOrbitingBody = actualQuery.orbitingBody || '';
         const actualAttr = actualQuery.attr || 'relative_velocity_kps';
         
-        let browseUrl = `${nasaBaseUrl}${endpoints['browse']}${params['ak']}${apiKey}&page=${actualPage}`
+        let browseUrl = `${this.nasaBaseUrl}${this.endpoints['browse']}${this.params['ak']}${apiKey}&page=${actualPage}`;
+
         const result = await fetch(browseUrl)
           .then((res) => res.json())
           .then((res) => {
             let neows: any[] = res?.near_earth_objects || [];
             
-            // TEMPLATE FILTERING
+            // FILTERING
             // filter for a selected hazardous boolean
             if (actualHazardous && actualHazardous !== 'none') {
               neows = neows.filter((el:any, idx) => actualHazardous === ''+el.is_potentially_hazardous_asteroid);       
@@ -282,6 +220,7 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
             if (actualOrbitingBody && actualOrbitingBody !== 'none') {
               neows = neows.filter((el:any, idx) => actualOrbitingBody === el.close_approach_data[0].orbiting_body);       
             }
+            // filter for names of near earth objects
             if (actualName && actualName !== 'none') {
               neows = neows.filter((el:any, idx) => actualName === el.name);       
             }
@@ -313,8 +252,9 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
                       case 'miss_distance_km':
                         attrs.push(parseFloat(el.miss_distance.kilometers));
                         break;
-                      default:
-                      //   attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
+                      case 'estimated_diameter':
+                        attrs.push(parseFloat(n.estimated_diameter.kilometers.estimated_diameter_max));
+                        break;
                     }
                   });
 
@@ -322,11 +262,9 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
                   names.push(n.name_limited)
 
                   // when using toDataFrame, changing the attr just adds it to the dataframe
-                  // but if we instantiate a new mutable dataframe every time, we don;t get the busy view with all the labels
+                  // but if we instantiate a new mutable dataframe every time, we don't get the busy view with all the labels
                   // we just get one label
-                  // const browseName :string = n.name_limited ? n.name_limited : n.name;
-
-                  let frame = new MutableDataFrame({
+                  let frame: frameType = {
                     name: ''+idx,
                     fields: [
                       {
@@ -338,13 +276,18 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
                         values: attrs,
                       }
                     ],
-                  });
+                  };
 
-                  return acc.concat(frame)
+                  if (actualAttr === 'absolute_magnitude_h' || actualAttr === 'estimated_diameter'){
+                    frame.fields.filter((el) => el.name != 'time')[0] = {...frame.fields.filter((el) => el.name != 'time')[0], X: browseName};
+                  }
+                    
+                  return acc.concat([new MutableDataFrame(frame)]);
                 } 
 
                 return acc;
               }, [])
+            // ALTERNATE WAY OF HANDLING STATIC ATTRS
             // } else {
               // let title: string = 'Absolute Magnitude';
 
@@ -380,10 +323,13 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
         return Promise.resolve({data: result});
       case 'range':
         const actualStartDate = actualQuery.startDate ? actualQuery.startDate : new Date().toISOString().substring(0, 10);
+
+        // HANDLE LESS THAN A WEEK BY PROVIDING AN END DATE
         // const actualEndDate = actualQuery.endDate ? actualQuery.endDate : actualStartDate;
 
-        let rangeUrl = `${nasaBaseUrl}${endpoints['range']}${params['ak']}${apiKey}&${params['sd']}${actualStartDate}`
+        let rangeUrl = `${this.nasaBaseUrl}${this.endpoints['range']}${this.params['ak']}${apiKey}&${this.params['sd']}${actualStartDate}`
 
+        // FUTURE DEVELOPMENT?
         // use a radio button group to selet either a single day or a week
         // when selecting a single day, have the startDate === endDate
         // rangeUrl += actualEndDate ? `&${params['ed']}${actualEndDate}` : '';
@@ -403,8 +349,6 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
               let frames: any[] = [];
               //collection of asteroids
               dayOfNeows.forEach((n: any) => {
-
-              
                 if (n.close_approach_data.length > 0) {
                   // iterate through all the approaches an asteroid has to earth
                   n.close_approach_data.map((el: any) => {
@@ -421,18 +365,14 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
                       case 'miss_distance_km':
                         attrs.push(parseFloat(el.miss_distance.kilometers));
                         break;
-                      // default:
-                      //   attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
                     }
                   });
-
-                  // build the list of names for the select
-                  names.push(n.name)
 
                   // when using toDataFrame, changing the attr just adds it to the dataframe
                   // but if we instantiate a new mutable dataframe every time, we don;t get the busy view with all the labels
                   // we just get one label
                   const rangeName :string = n.name_limited ? n.name_limited : n.name;
+
                   let frame = new MutableDataFrame({
                     name: kDate,
                     fields: [
@@ -484,21 +424,6 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
       
     let actualQuery = interpolateQuery(previousQuery);
 
-    const nasaBaseUrl = 'https://api.nasa.gov/neo/rest/v1/';
-    // move this into config editor
-    const apiKey = 'yAyH8cJEzor6tU5Kl6iLxnNnqLunMUq9jpy9rES4';
-    
-    const endpoints: NasaEndpoints = {
-      browse: 'neo/browse?',
-      range: 'feed?'
-    };
-
-    const params: NasaParams = {
-      sd: 'start_date=',
-      ed: 'end_date=',
-      ak: 'api_key='
-    };
-
     // used for the selections
     let names: any[] = [];
 
@@ -520,7 +445,7 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
         const actualOrbitingBody = actualQuery.orbitingBody || '';
         // const actualAttr = actualQuery.attr || 'relative_velocity_kps';
         
-        let browseUrl = `${nasaBaseUrl}${endpoints['browse']}${params['ak']}${apiKey}&page=${actualPage}`
+        let browseUrl = `${this.nasaBaseUrl}${this.endpoints['browse']}${this.params['ak']}${this.apiKey}&page=${actualPage}`
         const result = await fetch(browseUrl)
           .then((res) => res.json())
           .then((res) => {
@@ -539,6 +464,7 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
               neows = neows.filter((el:any, idx) => actualName === el.name);       
             }
 
+
             // Annotation filtering
             if (annotationType == 'names') {
               Promise.resolve({data: []});
@@ -550,12 +476,7 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
               Promise.resolve({data: []});
             }
 
-
             // we just need the time and the name
-            
-            
-            
-            
             // build a collection of neows
             let annotationEvents: any[] = neows.reduce((acc, n: NearEarthObject,idx: number) => {
               let times: any[] = [];
@@ -574,43 +495,10 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
                       // tags: annotationType,
                     });
                   }
-                  // set the other attr based on selected attr
-                  // switch (actualAttr) {
-                  //   case 'relative_velocity_kps':
-                  //     attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
-                  //     break;
-                  //   case 'absolute_magnitude_h':
-                  //     attrs.push(parseFloat(n.absolute_magnitude_h));
-                  //     break;
-                  //   case 'miss_distance_km':
-                  //     attrs.push(parseFloat(el.miss_distance.kilometers));
-                  //     break;
-                  //   default:
-                  //   //   attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
-                  // }
                 });
 
                 // build the list of names for the select
-                // names.push(n.name_limited)
-
-                // when using toDataFrame, changing the attr just adds it to the dataframe
-                // but if we instantiate a new mutable dataframe every time, we don;t get the busy view with all the labels
-                // we just get one label
-                // const browseName :string = n.name_limited ? n.name_limited : n.name;
-
-                // let frame = new MutableDataFrame({
-                //   name: ''+idx,
-                //   fields: [
-                //     {
-                //       name: 'time',
-                //       values: times,
-                //     },
-                //     {
-                //       name: browseName,
-                //       values: attrs,
-                //     }
-                //   ],
-                // });
+                names.push(n.name_limited)
 
                 return acc.concat(toDataFrame(times))
               }
@@ -618,96 +506,96 @@ export class NasaNeoWsApi extends DataSourceApi<NasaNeoWsQuery> {
               return acc;
             }, [])
 
-            // how to update something in the query editor based on data passed in from the query
-            // actualQuery.names = names;
-
             return annotationEvents;
           });
           
         return Promise.resolve({data: result});
-      case 'range':
-        const actualStartDate = actualQuery.startDate ? actualQuery.startDate : new Date().toISOString().substring(0, 10);
-        // const actualEndDate = actualQuery.endDate ? actualQuery.endDate : actualStartDate;
+      
+      // BUILD OUT RANGE ANNOTATIONS BELOW
+      // case 'range':
+      //   const actualStartDate = actualQuery.startDate ? actualQuery.startDate : new Date().toISOString().substring(0, 10);
+      //   // const actualEndDate = actualQuery.endDate ? actualQuery.endDate : actualStartDate;
 
-        let rangeUrl = `${nasaBaseUrl}${endpoints['range']}${params['ak']}${apiKey}&${params['sd']}${actualStartDate}`
+      //   let rangeUrl = `${this.nasaBaseUrl}${this.endpoints['range']}${this.params['ak']}${this.apiKey}&${this.params['sd']}${actualStartDate}`
 
-        // use a radio button group to selet either a single day or a week
-        // when selecting a single day, have the startDate === endDate
-        // rangeUrl += actualEndDate ? `&${params['ed']}${actualEndDate}` : '';
-        const rangeResult = await fetch(rangeUrl)
-          .then((res) => res.json())
-          .then((res) => {
-            const neows = res?.near_earth_objects || {};
-            const neowsDates: any[] = Object.keys(res?.near_earth_objects) || [];
+      //   // use a radio button group to selet either a single day or a week
+      //   // when selecting a single day, have the startDate === endDate
+      //   // rangeUrl += actualEndDate ? `&${params['ed']}${actualEndDate}` : '';
+      //   const rangeResult = await fetch(rangeUrl)
+      //     .then((res) => res.json())
+      //     .then((res) => {
+      //       const neows = res?.near_earth_objects || {};
+      //       const neowsDates: any[] = Object.keys(res?.near_earth_objects) || [];
             
-            // build a collection of neows first by days
-            let neowsWithTime: any[] = neowsDates.reduce((acc,kDate,idx) => {
-              // collection of asteroids for each date
-              const dayOfNeows = neows[kDate];
+      //       // build a collection of neows first by days
+      //       let neowsWithTime: any[] = neowsDates.reduce((acc,kDate,idx) => {
+      //         // collection of asteroids for each date
+      //         const dayOfNeows = neows[kDate];
 
-              let times: any[] = [];
-              let attrs: any[] = [];
-              let frames: any[] = [];
-              //collection of asteroids
-              dayOfNeows.forEach((n: any) => {
+      //         let times: any[] = [];
+      //         let attrs: any[] = [];
+      //         let frames: any[] = [];
+      //         //collection of asteroids
+      //         dayOfNeows.forEach((n: any) => {
 
               
-                if (n.close_approach_data.length > 0) {
-                  // iterate through all the approaches an asteroid has to earth
-                  n.close_approach_data.map((el: any) => {
+      //           if (n.close_approach_data.length > 0) {
+      //             // iterate through all the approaches an asteroid has to earth
+      //             n.close_approach_data.map((el: any) => {
 
-                    times.push(el.epoch_date_close_approach);
-                    // set the other attr based on selected attr
-                    switch (actualQuery.attr) {
-                      case ('relative_velocity_kps'):
-                        attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
-                        break;
-                      case 'absolute_magnitude_h':
-                        attrs.push(parseFloat(n.absolute_magnitude_h));
-                        break;
-                      case 'miss_distance_km':
-                        attrs.push(parseFloat(el.miss_distance.kilometers));
-                        break;
-                      // default:
-                      //   attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
-                    }
-                  });
+      //               times.push(el.epoch_date_close_approach);
+      //               // set the other attr based on selected attr
+      //               switch (actualQuery.attr) {
+      //                 case ('relative_velocity_kps'):
+      //                   attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
+      //                   break;
+      //                 case 'absolute_magnitude_h':
+      //                   attrs.push(parseFloat(n.absolute_magnitude_h));
+      //                   break;
+      //                 case 'miss_distance_km':
+      //                   attrs.push(parseFloat(el.miss_distance.kilometers));
+      //                   break;
+      //                 // default:
+      //                 //   attrs.push(parseFloat(el.relative_velocity.kilometers_per_second));
+      //               }
+      //             });
 
-                  // build the list of names for the select
-                  names.push(n.name)
+      //             // build the list of names for the select
+      //             names.push(n.name)
 
-                  // when using toDataFrame, changing the attr just adds it to the dataframe
-                  // but if we instantiate a new mutable dataframe every time, we don;t get the busy view with all the labels
-                  // we just get one label
-                  const rangeName :string = n.name_limited ? n.name_limited : n.name;
-                  let frame = new MutableDataFrame({
-                    name: kDate,
-                    fields: [
-                      {
-                        name: 'time',
-                        values: times,
-                      },
-                      {
-                        name: rangeName,
-                        values: attrs,
-                      }
-                    ],
-                  });
+      //             // when using toDataFrame, changing the attr just adds it to the dataframe
+      //             // but if we instantiate a new mutable dataframe every time, we don;t get the busy view with all the labels
+      //             // we just get one label
+      //             const rangeName :string = n.name_limited ? n.name_limited : n.name;
+
+      //             let frame = new MutableDataFrame({
+      //               name: kDate,
+      //               fields: [
+      //                 {
+      //                   name: 'time',
+      //                   values: times,
+      //                 },
+      //                 {
+      //                   name: rangeName,
+      //                   values: attrs,
+      //                 }
+      //               ],
+      //             });
                   
-                  frames.push(frame);  
-                }
-              });
+      //             frames.push(frame);  
+      //           }
+      //         });
                 
-              return acc.concat(frames)
-            }, [])
+      //         return acc.concat(frames)
+      //       }, [])
 
-            // how to update something in the query editor based on data passed in from the query
-            // actualQuery.names = names;
+      //       // how to update something in the query editor based on data passed in from the query
+      //       // actualQuery.names = names;
 
-            return neowsWithTime;
-          });
+      //       return neowsWithTime;
+      //     });
           
-        return Promise.resolve({data: rangeResult});
+      //   return Promise.resolve({data: rangeResult});
 
       default:
           return Promise.resolve({data: []});
